@@ -1,6 +1,6 @@
-# Claude Vision MCP
+# Claudecode Vision MCP
 
-> Give vision to visionless LLMs. / 为没有视觉能力的模型提供识图能力。
+> Give vision to visionless LLMs in Claude Code. / 为 CC 中无视觉能力的模型提供识图能力。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -42,8 +42,8 @@ The MCP server acts as a bridge between your non-vision LLM and a vision-capable
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-username/claude-vision-mcp.git
-cd claude-vision-mcp
+git clone https://github.com/your-username/claudecode-vision-mcp.git
+cd claudecode-vision-mcp
 pip install -r requirements.txt
 ```
 
@@ -67,7 +67,7 @@ cp .env.example .env
 **Method A — User-level (all projects):**
 
 ```bash
-claude mcp add vision -- python /path/to/claude-vision-mcp/server.py
+claude mcp add vision -- python /path/to/claudecode-vision-mcp/server.py
 ```
 
 **Method B — Project-level:**
@@ -79,7 +79,7 @@ Create `.mcp.json` in your project root:
   "mcpServers": {
     "vision": {
       "command": "python",
-      "args": ["/path/to/claude-vision-mcp/server.py"]
+      "args": ["/path/to/claudecode-vision-mcp/server.py"]
     }
   }
 }
