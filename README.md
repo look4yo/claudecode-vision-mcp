@@ -2,6 +2,8 @@
 
 > Give vision to non-vision Claude Code base models. / 为 Claude Code 中无原生视觉能力的基座模型提供识图能力。
 
+[English](README.md) | [简体中文](README.zh-CN.md)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -29,6 +31,25 @@ User sends or references an image in Claude Code
           v
   Non-vision model answers using that text
 ```
+
+## Example: Before vs After
+
+The image below is a simple capability sheet designed to test OCR, table extraction, chart reading, shape counting, and short-note lookup. The same detailed prompt was used with a non-vision Claude Code base model before and after enabling this MCP server.
+
+![Vision capability test sheet](assets/vision-capability-test-sheet.png)
+
+| Task | Without this MCP server | With this MCP server |
+| --- | --- | --- |
+| Read the image | The model reported `[Unsupported Image]` and did not guess. | The model used `describe_image` and returned structured image content. |
+| Main title | `uncertain` | `Vision Capability Test Sheet` |
+| A. Experiment table | All sample fields were `uncertain`. | Extracted A1-A5 values, including A4 as `HOLD` with Temp `23.6`, Pressure `97.5`, Yield `66.3`. |
+| Follow-up samples | Empty result. | `A2`, `A4` |
+| B. Monthly output chart | Jan-Jun values were `null`. | Jan `14`, Feb `22`, Mar `19`, Apr `27`, May `25`, Jun `31`; peak month `June`. |
+| C. Shape count | Shape counts were `null`. | Red circles `5`, blue triangles `7`, green squares `4`; blue triangles exceed six. |
+| D. Short notes | Note fields were `uncertain`. | Meeting room `C204`, inspector `Lina Zhou`, device ID `KX-17`, retry threshold `0.85`, backup date `2026-05-08`. |
+| Verification code | `uncertain` | `VX-2749` |
+
+Summary: without a vision bridge, the base model correctly avoided fabricating answers but could not complete the visual task. With this MCP server, the same non-vision workflow can route the image through a vision-capable API and answer from the returned text. This is a functional demo, not a benchmark or an accuracy guarantee for every model, provider, or image.
 
 ## Prerequisites
 
