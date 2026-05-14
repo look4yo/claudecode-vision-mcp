@@ -86,7 +86,7 @@ cp .env.example .env
 
 | 后端 | API key 页面 | 说明 |
 | --- | --- | --- |
-| DashScope / Alibaba Qwen | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/) | 本仓库默认 base URL |
+| DashScope / Alibaba Qwen | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/) | 本仓库默认 base URL。推荐原因之一是阿里云百炼通常会为新用户提供较充足的多模态千问模型免费额度；具体额度和有效期请以官方免费额度页面为准。 |
 | OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | 需要选择支持视觉输入的 chat model |
 | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | 需要 LiteLLM 等 OpenAI-compatible gateway |
 | 其他供应商 | 供应商文档 | 必须支持带 `image_url` 输入的 `/chat/completions` |

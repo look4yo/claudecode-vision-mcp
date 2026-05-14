@@ -86,7 +86,7 @@ Provider links:
 
 | Backend | API key page | Notes |
 | --- | --- | --- |
-| DashScope / Alibaba Qwen | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/) | Default base URL in this repo |
+| DashScope / Alibaba Qwen | [bailian.console.aliyun.com](https://bailian.console.aliyun.com/) | Default base URL in this repo. Recommended because Alibaba Cloud Model Studio often provides generous new-user free quotas for multimodal Qwen models; check the official quota page for current limits and validity. |
 | OpenAI | [platform.openai.com/api-keys](https://platform.openai.com/api-keys) | Use a vision-capable chat model |
 | Anthropic | [console.anthropic.com](https://console.anthropic.com/) | Requires an OpenAI-compatible gateway such as LiteLLM |
 | Other providers | Provider docs | Must support `/chat/completions` with `image_url` input |
