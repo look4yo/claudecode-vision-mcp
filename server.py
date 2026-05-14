@@ -1,7 +1,7 @@
-"""MCP Vision Server — Give vision to visionless LLMs.
+"""MCP Vision Server — Give vision to visionless Claude Code models.
 
 Call a vision-capable model API to convert image content into text descriptions.
-Supports automatic model fallback: wanx-v1 → qwen3.5-omni-plus-2026-03-15 → qwen3.5-omni-plus
+Supports automatic model fallback through OpenAI-compatible vision APIs.
 """
 
 import asyncio
@@ -12,26 +12,53 @@ from pathlib import Path
 from dotenv import load_dotenv
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp.types import Tool, TextContent
+from mcp.types import CallToolResult, Tool, TextContent
 import httpx
 
 load_dotenv(Path(__file__).resolve().parent / ".env")
 
 API_KEY = os.getenv("VISION_API_KEY", "")
 BASE_URL = os.getenv("VISION_API_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-MAX_TOKENS = int(os.getenv("VISION_MAX_TOKENS", "4096"))
 
-VISION_MODELS = [
-    "wanx-v1",
+DEFAULT_VISION_MODELS = [
+    "qwen3.5-plus",
     "qwen3.5-omni-plus-2026-03-15",
     "qwen3.5-omni-plus",
 ]
+
+RETRYABLE_STATUS_CODES = {404, 429, 503}
+FATAL_STATUS_CODES = {400, 401, 403}
 
 MIME_MAP = {
     ".jpg": "jpeg", ".jpeg": "jpeg", ".png": "png",
     ".gif": "gif", ".webp": "webp", ".bmp": "bmp",
     ".tiff": "tiff", ".tif": "tiff",
 }
+
+
+class NonRetryableAPIError(RuntimeError):
+    """An API error that should be shown directly instead of hidden by fallback."""
+
+
+def parse_max_tokens() -> int:
+    raw = os.getenv("VISION_MAX_TOKENS", "4096").strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ValueError(f"VISION_MAX_TOKENS must be an integer, got {raw!r}") from exc
+    if value <= 0:
+        raise ValueError(f"VISION_MAX_TOKENS must be positive, got {value}")
+    return value
+
+
+def parse_vision_models() -> list[str]:
+    raw = os.getenv("VISION_MODELS", "")
+    models = [model.strip() for model in raw.split(",") if model.strip()]
+    return models or DEFAULT_VISION_MODELS
+
+
+MAX_TOKENS = parse_max_tokens()
+VISION_MODELS = parse_vision_models()
 
 
 def file_to_data_uri(image_path: str) -> str:
@@ -75,7 +102,9 @@ async def call_vision_api(data_uri: str, question: str, client: httpx.AsyncClien
 
             if resp.status_code >= 400:
                 body = resp.text[:500]
-                if resp.status_code in (404, 503, 429) or "quota" in body.lower():
+                if resp.status_code in FATAL_STATUS_CODES:
+                    raise NonRetryableAPIError(f"[{model}] API {resp.status_code}: {body}")
+                if resp.status_code in RETRYABLE_STATUS_CODES or "quota" in body.lower():
                     last_error = f"[{model}] API {resp.status_code}, trying next model"
                     continue
                 raise RuntimeError(f"API {resp.status_code}: {body}")
@@ -88,6 +117,8 @@ async def call_vision_api(data_uri: str, question: str, client: httpx.AsyncClien
 
         except httpx.TimeoutException:
             last_error = f"[{model}] timeout, trying next model"
+        except NonRetryableAPIError:
+            raise
         except Exception as e:
             if "FileNotFoundError" in type(e).__name__:
                 raise
@@ -97,6 +128,10 @@ async def call_vision_api(data_uri: str, question: str, client: httpx.AsyncClien
             await asyncio.sleep(0.5)
 
     raise RuntimeError(f"All models unavailable. Last error: {last_error}")
+
+
+def tool_result(text: str, *, is_error: bool = False) -> CallToolResult:
+    return CallToolResult(content=[TextContent(type="text", text=text)], isError=is_error)
 
 
 async def main():
@@ -142,9 +177,9 @@ async def main():
         ]
 
     @server.call_tool()
-    async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    async def call_tool(name: str, arguments: dict) -> CallToolResult:
         if name != "describe_image":
-            return [TextContent(type="text", text=f"Unknown tool: {name}", isError=True)]
+            return tool_result(f"Unknown tool: {name}", is_error=True)
 
         image_path = arguments.get("image_path", "")
         question = arguments.get("question", "") or (
@@ -155,16 +190,16 @@ async def main():
         try:
             data_uri = file_to_data_uri(image_path)
         except FileNotFoundError as e:
-            return [TextContent(type="text", text=str(e), isError=True)]
+            return tool_result(str(e), is_error=True)
         except Exception as e:
-            return [TextContent(type="text", text=f"Failed to read image: {e}", isError=True)]
+            return tool_result(f"Failed to read image: {e}", is_error=True)
 
         async with httpx.AsyncClient() as client:
             try:
                 desc = await call_vision_api(data_uri, question, client)
-                return [TextContent(type="text", text=desc)]
+                return tool_result(desc)
             except Exception as e:
-                return [TextContent(type="text", text=f"Vision API call failed: {e}", isError=True)]
+                return tool_result(f"Vision API call failed: {e}", is_error=True)
 
     async with stdio_server() as (reader, writer):
         await server.run(reader, writer, server.create_initialization_options())
